@@ -11,7 +11,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z, generate, sleep} from 'genkit';
+import {z, generate, sleep, isGenkitError} from 'genkit';
 
 const RefineLikenessParametersInputSchema = z.object({
   baseImageDataUri: z
@@ -63,7 +63,7 @@ const refineLikenessParametersFlow = ai.defineFlow(
 
         return {refinedImageDataUri: media.url};
       } catch (e) {
-        if (ai.isGenkitError(e) && e.reason === 'rateLimit') {
+        if (isGenkitError(e) && e.reason === 'rateLimit') {
           retries++;
           if (retries < maxRetries) {
             const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
