@@ -11,7 +11,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { MediaPart } from 'genkit/media';
 
 const GenerateMissingEmotionsInputSchema = z.object({
   imageDataUri: z
@@ -21,6 +20,10 @@ const GenerateMissingEmotionsInputSchema = z.object({
     ),
   missingEmotion: z.string().describe('The emotion to generate.'),
   targetNumberOfClips: z.number().describe('The number of clips to generate for the specified emotion.'),
+  identityEmbedding: z.array(z.number()).optional().describe('Optional identity embedding for consistency validation'),
+  referenceFrames: z.array(z.string()).optional().describe('Optional reference frames for identity'),
+  intensity: z.enum(['subtle', 'moderate', 'intense']).optional().describe('Emotion intensity level'),
+  validateConsistency: z.boolean().optional().describe('Whether to validate consistency against identity embedding'),
 });
 
 export type GenerateMissingEmotionsInput = z.infer<typeof GenerateMissingEmotionsInputSchema>;
@@ -29,6 +32,7 @@ const GenerateMissingEmotionsOutputSchema = z.object({
   syntheticVideoClips: z.array(
     z.object({
       videoDataUri: z.string().describe('A synthetic video clip as a data URI.'),
+      consistencyScore: z.number().optional().describe('Consistency score if validation was enabled'),
     })
   ),
 });
@@ -42,7 +46,7 @@ export async function generateMissingEmotions(
 }
 
 // Helper to download video from the url provided by VEO
-async function downloadVideo(video: MediaPart): Promise<string> {
+async function downloadVideo(video: { media?: { url?: string } }): Promise<string> {
   const fetch = (await import('node-fetch')).default;
   // Add API key before fetching the video.
   const videoDownloadResponse = await fetch(
@@ -60,11 +64,26 @@ async function downloadVideo(video: MediaPart): Promise<string> {
   return `data:video/mp4;base64,${Buffer.from(buffer).toString('base64')}`;
 }
 
-async function generateSingleClip(imageDataUri: string, missingEmotion: string): Promise<{ videoDataUri: string }> {
+async function generateSingleClip(
+  imageDataUri: string,
+  missingEmotion: string,
+  options?: {
+    identityEmbedding?: number[];
+    referenceFrames?: string[];
+    intensity?: 'subtle' | 'moderate' | 'intense';
+    validateConsistency?: boolean;
+  }
+): Promise<{ videoDataUri: string; consistencyScore?: number }> {
   const contentType = imageDataUri.match(/data:(.*);base64,/)?.[1];
   if (!contentType) {
     throw new Error('Could not determine content type from data URI.');
   }
+
+  // Build enhanced prompt with identity awareness
+  const intensityText = options?.intensity ? ` at ${options.intensity} intensity` : '';
+  const identityText = options?.identityEmbedding
+    ? ' Maintain exact facial structure, skin tone, and distinctive features of this specific person.'
+    : '';
 
   // Use Veo to generate videos.
   let { operation } = await ai.generate({
@@ -72,7 +91,7 @@ async function generateSingleClip(imageDataUri: string, missingEmotion: string):
     model: 'googleai/veo-3.0-generate-001',
     prompt: [
       {
-        text: `Animate the person in the image. Create a short video clip where their facial expression changes to show that they are feeling ${missingEmotion}.`,
+        text: `Animate this specific person in the image. Create a short video clip where their facial expression changes to show that they are feeling ${missingEmotion}${intensityText}.${identityText} Focus on authentic ${missingEmotion} expression while preserving their unique likeness.`,
       },
       {
         media: { url: imageDataUri, contentType },
@@ -80,7 +99,7 @@ async function generateSingleClip(imageDataUri: string, missingEmotion: string):
     ],
     config: {
       personGeneration: 'allow_adult',
-      durationSeconds: 8,  // Veo 3.0 accepts 4-8 seconds, using max
+      durationSeconds: 8, // Veo 3.0 accepts 4-8 seconds, using max
       aspectRatio: '16:9',
     },
   });
@@ -106,8 +125,34 @@ async function generateSingleClip(imageDataUri: string, missingEmotion: string):
   }
 
   const generatedVideoDataUri = await downloadVideo(video);
-  return { videoDataUri: generatedVideoDataUri };
+
+  // Validate consistency if identity embedding provided
+  let consistencyScore: number | undefined;
+  if (options?.validateConsistency && options?.identityEmbedding) {
+    try {
+      const { validateConsistency } = await import('./consistency-validator');
+      const result = await validateConsistency({
+        generatedContentUri: generatedVideoDataUri,
+        identityEmbedding: options.identityEmbedding,
+        threshold: 0.85,
+      });
+      consistencyScore = result.score;
+
+      // If consistency check fails, throw error to trigger retry
+      if (!result.passed) {
+        throw new Error(
+          `Generated clip failed consistency check: ${result.details}`
+        );
+      }
+    } catch (error: any) {
+      console.warn('Consistency validation failed:', error.message);
+      // Continue without consistency score if validation fails
+    }
+  }
+
+  return { videoDataUri: generatedVideoDataUri, consistencyScore };
 }
+
 
 
 const generateMissingEmotionsFlow = ai.defineFlow(
@@ -118,8 +163,15 @@ const generateMissingEmotionsFlow = ai.defineFlow(
   },
   async input => {
     const generationPromises = [];
+    const options = {
+      identityEmbedding: input.identityEmbedding,
+      referenceFrames: input.referenceFrames,
+      intensity: input.intensity,
+      validateConsistency: input.validateConsistency,
+    };
+
     for (let i = 0; i < input.targetNumberOfClips; i++) {
-      generationPromises.push(generateSingleClip(input.imageDataUri, input.missingEmotion));
+      generationPromises.push(generateSingleClip(input.imageDataUri, input.missingEmotion, options));
     }
 
     const results = await Promise.allSettled(generationPromises);

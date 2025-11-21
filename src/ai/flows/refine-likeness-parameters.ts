@@ -10,8 +10,8 @@
  * @returns {Promise<RefineLikenessParametersOutput>} - A promise that resolves with the refined image data URI.
  */
 
-import {ai} from '@/ai/genkit';
-import {z, sleep} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const RefineLikenessParametersInputSchema = z.object({
   baseImageDataUri: z
@@ -46,11 +46,11 @@ const refineLikenessParametersFlow = ai.defineFlow(
 
     while (retries < maxRetries) {
       try {
-        const {media} = await ai.generate({
+        const { media } = await ai.generate({
           model: 'googleai/gemini-2.5-flash-image-preview',
           prompt: [
-            {media: {url: input.baseImageDataUri}},
-            {text: input.instructions},
+            { media: { url: input.baseImageDataUri } },
+            { text: input.instructions },
           ],
           config: {
             responseModalities: ['TEXT', 'IMAGE'], // MUST provide both TEXT and IMAGE, IMAGE only won't work
@@ -61,14 +61,14 @@ const refineLikenessParametersFlow = ai.defineFlow(
           throw new Error('No refined image returned from the model.');
         }
 
-        return {refinedImageDataUri: media.url};
+        return { refinedImageDataUri: media.url };
       } catch (e: any) {
         if ((e.reason === 'rateLimit' || (e.cause as any)?.reason === 'rateLimit')) {
           retries++;
           if (retries < maxRetries) {
             const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
             console.log(`Rate limited. Retrying in ${delay}ms...`);
-            await sleep(delay);
+            await new Promise((resolve) => setTimeout(resolve, delay));
             continue;
           }
         }
