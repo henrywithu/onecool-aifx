@@ -127,4 +127,3 @@ const generateMissingEmotionsFlow = ai.defineFlow(
     return { syntheticVideoClips };
   }
 );
-
