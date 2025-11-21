@@ -68,7 +68,7 @@ async function generateSingleClip(videoDataUri: string, missingEmotion: string):
 
     // Use Veo to generate videos.
     let { operation } = await ai.generate({
-        model: 'googleai/veo-3.0-generate-preview',
+        model: 'googleai/veo-2.0-generate-001',
         prompt: [
         {
             text: `Generate a short 5 second video of the actor in the provided video displaying the emotion: ${missingEmotion}.`,
@@ -78,6 +78,8 @@ async function generateSingleClip(videoDataUri: string, missingEmotion: string):
         },
         ],
         config: {
+          personGeneration: 'allow_adult',
+          durationSeconds: 5,
           aspectRatio: '16:9',
         },
     });
