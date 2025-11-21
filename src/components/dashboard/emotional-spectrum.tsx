@@ -1,3 +1,4 @@
+
 "use client";
 
 import { generateMissingEmotions } from "@/ai/flows/generate-missing-emotions";
@@ -72,16 +73,16 @@ export function EmotionalSpectrum({
       setGeneratedClips(result.syntheticVideoClips);
       if (result.syntheticVideoClips.length === 0) {
         toast({
-            title: "Generation Failed",
-            description: "Could not generate emotional clips. The AI may have had trouble processing the request.",
+            title: "Generation Incomplete",
+            description: "The AI completed but did not return any clips.",
             variant: "destructive",
           });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating emotions:", error);
       toast({
         title: "Generation Failed",
-        description: "Could not generate emotional clips.",
+        description: error.message || "Could not generate emotional clips.",
         variant: "destructive",
       });
     } finally {

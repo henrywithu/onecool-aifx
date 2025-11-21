@@ -120,7 +120,8 @@ const generateMissingEmotionsFlow = ai.defineFlow(
             console.log(`Successfully generated clip ${i + 1}`);
         } catch (error) {
             console.error(`Failed to generate clip ${i + 1}:`, error);
-            // Decide if you want to stop or continue. Here we'll continue.
+            // Re-throw the error to propagate it to the client
+            throw error;
         }
     }
 
