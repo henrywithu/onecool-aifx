@@ -71,7 +71,7 @@ async function generateSingleClip(imageDataUri: string, missingEmotion: string):
         model: 'googleai/veo-2.0-generate-001',
         prompt: [
         {
-            text: `Generate a short 5 second video of the actor in the provided image displaying the emotion: ${missingEmotion}. Make the person in the image move.`,
+            text: `Animate the person in the image. Create a short, 5-second video clip where their facial expression changes to show that they are feeling ${missingEmotion}.`,
         },
         {
             media: { url: imageDataUri, contentType },
@@ -116,9 +116,10 @@ const generateMissingEmotionsFlow = ai.defineFlow(
     outputSchema: GenerateMissingEmotionsOutputSchema,
   },
   async input => {
-    const generationPromises = Array.from({ length: input.targetNumberOfClips }, () =>
-        generateSingleClip(input.imageDataUri, input.missingEmotion)
-    );
+    const generationPromises = [];
+    for (let i = 0; i < input.targetNumberOfClips; i++) {
+        generationPromises.push(generateSingleClip(input.imageDataUri, input.missingEmotion));
+    }
 
     const results = await Promise.allSettled(generationPromises);
 
