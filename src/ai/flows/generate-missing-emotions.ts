@@ -52,10 +52,11 @@ const generateMissingEmotionsFlow = ai.defineFlow(
     const syntheticVideoClips: { videoDataUri: string }[] = [];
     
     // Helper to download video from the url provided by VEO
-    async function downloadVideo(video: MediaPart, path: string) {
+    async function downloadVideo(video: MediaPart) {
       const fetch = (await import('node-fetch')).default;
+      // Add API key before fetching the video.
       const videoDownloadResponse = await fetch(
-        `${video.media!.url}`
+        `${video.media!.url}&key=${process.env.GEMINI_API_KEY}`
       );
       if (
         !videoDownloadResponse ||
@@ -111,7 +112,7 @@ const generateMissingEmotionsFlow = ai.defineFlow(
           continue;
         }
 
-        const videoDataUri = await downloadVideo(video, `output-${i}.mp4`);
+        const videoDataUri = await downloadVideo(video);
 
         syntheticVideoClips.push({
           videoDataUri: videoDataUri,
