@@ -61,6 +61,11 @@ async function downloadVideo(video: MediaPart): Promise<string> {
 }
 
 async function generateSingleClip(videoDataUri: string, missingEmotion: string): Promise<{ videoDataUri: string }> {
+    const contentType = videoDataUri.match(/data:(.*);base64,/)?.[1];
+    if (!contentType) {
+      throw new Error('Could not determine content type from data URI.');
+    }
+
     // Use Veo to generate videos.
     let { operation } = await ai.generate({
         model: 'googleai/veo-3.0-generate-preview',
@@ -69,7 +74,7 @@ async function generateSingleClip(videoDataUri: string, missingEmotion: string):
             text: `Generate a short 5 second video of the actor in the provided video displaying the emotion: ${missingEmotion}.`,
         },
         {
-            media: { url: videoDataUri },
+            media: { url: videoDataUri, contentType },
         },
         ],
         config: {
