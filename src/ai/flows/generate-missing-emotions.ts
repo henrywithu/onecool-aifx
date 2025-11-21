@@ -63,7 +63,7 @@ async function downloadVideo(video: MediaPart) {
 async function generateSingleClip(videoDataUri: string, missingEmotion: string): Promise<{ videoDataUri: string }> {
     // Use Veo to generate videos.
     let { operation } = await ai.generate({
-        model: 'googleai/veo-2.0-generate-001',
+        model: 'googleai/veo-3.0-generate-preview',
         prompt: [
         {
             text: `Generate a short 5 second video of the actor in the provided video displaying the emotion: ${missingEmotion}.`,
@@ -73,9 +73,7 @@ async function generateSingleClip(videoDataUri: string, missingEmotion: string):
         },
         ],
         config: {
-        durationSeconds: 5,
-        aspectRatio: '16:9',
-        personGeneration: 'allow_adult',
+          aspectRatio: '16:9',
         },
     });
 
