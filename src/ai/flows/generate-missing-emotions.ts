@@ -9,9 +9,9 @@
  * - GenerateMissingEmotionsOutput - The return type for the generateMissingEmotions function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-import {MediaPart} from 'genkit/media';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
+import { MediaPart } from 'genkit/media';
 
 const GenerateMissingEmotionsInputSchema = z.object({
   imageDataUri: z
@@ -61,51 +61,52 @@ async function downloadVideo(video: MediaPart): Promise<string> {
 }
 
 async function generateSingleClip(imageDataUri: string, missingEmotion: string): Promise<{ videoDataUri: string }> {
-    const contentType = imageDataUri.match(/data:(.*);base64,/)?.[1];
-    if (!contentType) {
-      throw new Error('Could not determine content type from data URI.');
-    }
+  const contentType = imageDataUri.match(/data:(.*);base64,/)?.[1];
+  if (!contentType) {
+    throw new Error('Could not determine content type from data URI.');
+  }
 
-    // Use Veo to generate videos.
-    let { operation } = await ai.generate({
-        model: 'googleai/veo-2.0-generate-001',
-        prompt: [
-        {
-            text: `Animate the person in the image. Create a short, 5-second video clip where their facial expression changes to show that they are feeling ${missingEmotion}.`,
-        },
-        {
-            media: { url: imageDataUri, contentType },
-        },
-        ],
-        config: {
-          personGeneration: 'allow_adult',
-          durationSeconds: 5,
-          aspectRatio: '16:9',
-        },
-    });
+  // Use Veo to generate videos.
+  let { operation } = await ai.generate({
+    //model: 'googleai/veo-2.0-generate-001',
+    model: 'googleai/veo-3.0-generate-001',
+    prompt: [
+      {
+        text: `Animate the person in the image. Create a short video clip where their facial expression changes to show that they are feeling ${missingEmotion}.`,
+      },
+      {
+        media: { url: imageDataUri, contentType },
+      },
+    ],
+    config: {
+      personGeneration: 'allow_adult',
+      durationSeconds: 8,  // Veo 3.0 accepts 4-8 seconds, using max
+      aspectRatio: '16:9',
+    },
+  });
 
-    if (!operation) {
-        throw new Error('Expected the model to return an operation');
-    }
+  if (!operation) {
+    throw new Error('Expected the model to return an operation');
+  }
 
-    // Wait until the operation completes.
-    while (!operation.done) {
-        operation = await ai.checkOperation(operation);
-        // Sleep for 5 seconds before checking again.
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-    }
+  // Wait until the operation completes.
+  while (!operation.done) {
+    operation = await ai.checkOperation(operation);
+    // Sleep for 5 seconds before checking again.
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
 
-    if (operation.error) {
-        throw new Error(`Veo generation failed: ${operation.error.message}`);
-    }
+  if (operation.error) {
+    throw new Error(`Veo generation failed: ${operation.error.message}`);
+  }
 
-    const video = operation.output?.message?.content.find((p) => !!p.media);
-    if (!video) {
-        throw new Error('Failed to find the generated video in operation output');
-    }
+  const video = operation.output?.message?.content.find((p) => !!p.media);
+  if (!video) {
+    throw new Error('Failed to find the generated video in operation output');
+  }
 
-    const generatedVideoDataUri = await downloadVideo(video);
-    return { videoDataUri: generatedVideoDataUri };
+  const generatedVideoDataUri = await downloadVideo(video);
+  return { videoDataUri: generatedVideoDataUri };
 }
 
 
@@ -118,7 +119,7 @@ const generateMissingEmotionsFlow = ai.defineFlow(
   async input => {
     const generationPromises = [];
     for (let i = 0; i < input.targetNumberOfClips; i++) {
-        generationPromises.push(generateSingleClip(input.imageDataUri, input.missingEmotion));
+      generationPromises.push(generateSingleClip(input.imageDataUri, input.missingEmotion));
     }
 
     const results = await Promise.allSettled(generationPromises);
@@ -131,10 +132,10 @@ const generateMissingEmotionsFlow = ai.defineFlow(
         return result.status === 'fulfilled';
       })
       .map(result => (result as PromiseFulfilledResult<{ videoDataUri: string; }>).value);
-    
+
     if (syntheticVideoClips.length === 0 && results.some(r => r.status === 'rejected')) {
-        const firstError = results.find(r => r.status === 'rejected') as PromiseRejectedResult;
-        throw firstError.reason;
+      const firstError = results.find(r => r.status === 'rejected') as PromiseRejectedResult;
+      throw firstError.reason;
     }
 
     return { syntheticVideoClips };
