@@ -11,7 +11,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z, generate, sleep} from 'genkit';
+import {z, sleep} from 'genkit';
 
 const RefineLikenessParametersInputSchema = z.object({
   baseImageDataUri: z
@@ -46,7 +46,7 @@ const refineLikenessParametersFlow = ai.defineFlow(
 
     while (retries < maxRetries) {
       try {
-        const {media} = await generate({
+        const {media} = await ai.generate({
           model: 'googleai/gemini-2.5-flash-image-preview',
           prompt: [
             {media: {url: input.baseImageDataUri}},
@@ -63,7 +63,7 @@ const refineLikenessParametersFlow = ai.defineFlow(
 
         return {refinedImageDataUri: media.url};
       } catch (e: any) {
-        if (e.reason === 'rateLimit' || (e.cause as any)?.reason === 'rateLimit') {
+        if ((e.reason === 'rateLimit' || (e.cause as any)?.reason === 'rateLimit')) {
           retries++;
           if (retries < maxRetries) {
             const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
