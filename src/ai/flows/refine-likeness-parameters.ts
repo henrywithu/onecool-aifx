@@ -11,7 +11,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z, isGenkitError, generate, sleep} from 'genkit';
 
 const RefineLikenessParametersInputSchema = z.object({
   baseImageDataUri: z
@@ -41,21 +41,41 @@ const refineLikenessParametersFlow = ai.defineFlow(
     outputSchema: RefineLikenessParametersOutputSchema,
   },
   async input => {
-    const {media} = await ai.generate({
-      model: 'googleai/gemini-2.5-flash-image-preview',
-      prompt: [
-        {media: {url: input.baseImageDataUri}},
-        {text: input.instructions},
-      ],
-      config: {
-        responseModalities: ['TEXT', 'IMAGE'], // MUST provide both TEXT and IMAGE, IMAGE only won't work
-      },
-    });
+    let retries = 0;
+    const maxRetries = 5;
 
-    if (!media) {
-      throw new Error('No refined image returned from the model.');
+    while (retries < maxRetries) {
+      try {
+        const {media} = await generate({
+          model: 'googleai/gemini-2.5-flash-image-preview',
+          prompt: [
+            {media: {url: input.baseImageDataUri}},
+            {text: input.instructions},
+          ],
+          config: {
+            responseModalities: ['TEXT', 'IMAGE'], // MUST provide both TEXT and IMAGE, IMAGE only won't work
+          },
+        });
+
+        if (!media) {
+          throw new Error('No refined image returned from the model.');
+        }
+
+        return {refinedImageDataUri: media.url};
+      } catch (e) {
+        if (isGenkitError(e) && e.reason === 'rateLimit') {
+          retries++;
+          if (retries < maxRetries) {
+            const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
+            console.log(`Rate limited. Retrying in ${delay}ms...`);
+            await sleep(delay);
+            continue;
+          }
+        }
+        throw e;
+      }
     }
 
-    return {refinedImageDataUri: media.url};
+    throw new Error('Failed to refine likeness after multiple retries.');
   }
 );
