@@ -11,13 +11,13 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z, isGenkitError, generate, sleep} from 'genkit';
+import {z, generate, sleep, isGenkitError} from 'genkit';
 
 const RefineLikenessParametersInputSchema = z.object({
   baseImageDataUri: z
     .string()
     .describe(
-      'The base image to refine, as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.' 
+      'The base image to refine, as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.'
     ),
   instructions: z.string().describe('Natural language instructions for refining the likeness.'),
 });
