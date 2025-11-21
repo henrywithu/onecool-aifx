@@ -42,7 +42,7 @@ export async function generateMissingEmotions(
 }
 
 // Helper to download video from the url provided by VEO
-async function downloadVideo(video: MediaPart) {
+async function downloadVideo(video: MediaPart): Promise<string> {
   const fetch = (await import('node-fetch')).default;
   // Add API key before fetching the video.
   const videoDownloadResponse = await fetch(
@@ -109,23 +109,22 @@ const generateMissingEmotionsFlow = ai.defineFlow(
     outputSchema: GenerateMissingEmotionsOutputSchema,
   },
   async input => {
-    
-    const generationPromises = Array.from({ length: input.targetNumberOfClips }).map(() => 
-        generateSingleClip(input.videoDataUri, input.missingEmotion)
-    );
+    const syntheticVideoClips: { videoDataUri: string }[] = [];
 
-    const results = await Promise.allSettled(generationPromises);
-
-    const syntheticVideoClips = results
-      .filter(result => {
-        if (result.status === 'rejected') {
-          console.error('Video generation failed:', result.reason);
-          return false;
+    // Process clips sequentially to avoid rate-limiting issues.
+    for (let i = 0; i < input.targetNumberOfClips; i++) {
+        console.log(`Generating clip ${i + 1} of ${input.targetNumberOfClips}...`);
+        try {
+            const clip = await generateSingleClip(input.videoDataUri, input.missingEmotion);
+            syntheticVideoClips.push(clip);
+            console.log(`Successfully generated clip ${i + 1}`);
+        } catch (error) {
+            console.error(`Failed to generate clip ${i + 1}:`, error);
+            // Decide if you want to stop or continue. Here we'll continue.
         }
-        return true;
-      })
-      .map(result => (result as PromiseFulfilledResult<{ videoDataUri: string }>).value);
+    }
 
     return { syntheticVideoClips };
   }
 );
+
