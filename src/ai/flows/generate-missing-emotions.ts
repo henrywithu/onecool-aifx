@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -11,6 +12,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import wav from 'wav';
+import { MediaPart } from 'genkit/media';
 
 const GenerateMissingEmotionsInputSchema = z.object({
   videoDataUri: z
@@ -40,23 +42,6 @@ export async function generateMissingEmotions(
   return generateMissingEmotionsFlow(input);
 }
 
-const generateMissingEmotionsPrompt = ai.definePrompt({
-  name: 'generateMissingEmotionsPrompt',
-  input: {schema: GenerateMissingEmotionsInputSchema},
-  output: {schema: GenerateMissingEmotionsOutputSchema},
-  prompt: `You are an expert in generating realistic video clips of actors displaying specific emotions.
-
-  Based on the provided video data and the target emotion, generate {{targetNumberOfClips}} synthetic video clips showing the actor expressing the emotion: {{missingEmotion}}.
-
-  Ensure the generated clips maintain facial consistency with the original video and accurately represent the target emotion.
-
-  Original Video: {{media url=videoDataUri}}
-  Target Emotion: {{missingEmotion}}
-
-  Output the synthesized video clips as data URIs.
-  `, 
-});
-
 const generateMissingEmotionsFlow = ai.defineFlow(
   {
     name: 'generateMissingEmotionsFlow',
@@ -64,7 +49,26 @@ const generateMissingEmotionsFlow = ai.defineFlow(
     outputSchema: GenerateMissingEmotionsOutputSchema,
   },
   async input => {
-    const syntheticVideoClips = [];
+    const syntheticVideoClips: { videoDataUri: string }[] = [];
+    
+    // Helper to download video from the url provided by VEO
+    async function downloadVideo(video: MediaPart, path: string) {
+      const fetch = (await import('node-fetch')).default;
+      const videoDownloadResponse = await fetch(
+        `${video.media!.url}`
+      );
+      if (
+        !videoDownloadResponse ||
+        videoDownloadResponse.status !== 200 ||
+        !videoDownloadResponse.body
+      ) {
+        throw new Error('Failed to fetch video');
+      }
+      
+      const buffer = await videoDownloadResponse.arrayBuffer();
+      return `data:video/mp4;base64,${Buffer.from(buffer).toString('base64')}`;
+    }
+
     for (let i = 0; i < input.targetNumberOfClips; i++) {
       try {
         // Use Veo to generate videos.
@@ -72,7 +76,7 @@ const generateMissingEmotionsFlow = ai.defineFlow(
           model: 'googleai/veo-2.0-generate-001',
           prompt: [
             {
-              text: `Generate a video of the actor in the provided video displaying the emotion: ${input.missingEmotion}.`,
+              text: `Generate a short 5 second video of the actor in the provided video displaying the emotion: ${input.missingEmotion}.`,
             },
             {
               media: { url: input.videoDataUri },
@@ -107,8 +111,10 @@ const generateMissingEmotionsFlow = ai.defineFlow(
           continue;
         }
 
+        const videoDataUri = await downloadVideo(video, `output-${i}.mp4`);
+
         syntheticVideoClips.push({
-          videoDataUri: video.media!.url,
+          videoDataUri: videoDataUri,
         });
       } catch (error) {
         console.error('Error generating video:', error);
@@ -118,4 +124,3 @@ const generateMissingEmotionsFlow = ai.defineFlow(
     return { syntheticVideoClips };
   }
 );
-
