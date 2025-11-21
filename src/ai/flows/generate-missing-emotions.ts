@@ -14,10 +14,10 @@ import {z} from 'genkit';
 import {MediaPart} from 'genkit/media';
 
 const GenerateMissingEmotionsInputSchema = z.object({
-  videoDataUri: z
+  imageDataUri: z
     .string()
     .describe(
-      "A video of an actor, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "A frame from a video of an actor, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
   missingEmotion: z.string().describe('The emotion to generate.'),
   targetNumberOfClips: z.number().describe('The number of clips to generate for the specified emotion.'),
@@ -60,8 +60,8 @@ async function downloadVideo(video: MediaPart): Promise<string> {
   return `data:video/mp4;base64,${Buffer.from(buffer).toString('base64')}`;
 }
 
-async function generateSingleClip(videoDataUri: string, missingEmotion: string): Promise<{ videoDataUri: string }> {
-    const contentType = videoDataUri.match(/data:(.*);base64,/)?.[1];
+async function generateSingleClip(imageDataUri: string, missingEmotion: string): Promise<{ videoDataUri: string }> {
+    const contentType = imageDataUri.match(/data:(.*);base64,/)?.[1];
     if (!contentType) {
       throw new Error('Could not determine content type from data URI.');
     }
@@ -71,10 +71,10 @@ async function generateSingleClip(videoDataUri: string, missingEmotion: string):
         model: 'googleai/veo-2.0-generate-001',
         prompt: [
         {
-            text: `Generate a short 5 second video of the actor in the provided video displaying the emotion: ${missingEmotion}.`,
+            text: `Generate a short 5 second video of the actor in the provided image displaying the emotion: ${missingEmotion}. Make the person in the image move.`,
         },
         {
-            media: { url: videoDataUri, contentType },
+            media: { url: imageDataUri, contentType },
         },
         ],
         config: {
@@ -116,20 +116,24 @@ const generateMissingEmotionsFlow = ai.defineFlow(
     outputSchema: GenerateMissingEmotionsOutputSchema,
   },
   async input => {
-    const syntheticVideoClips: { videoDataUri: string }[] = [];
+    const generationPromises = Array.from({ length: input.targetNumberOfClips }, () =>
+        generateSingleClip(input.imageDataUri, input.missingEmotion)
+    );
 
-    // Process clips sequentially to avoid rate-limiting issues.
-    for (let i = 0; i < input.targetNumberOfClips; i++) {
-        console.log(`Generating clip ${i + 1} of ${input.targetNumberOfClips}...`);
-        try {
-            const clip = await generateSingleClip(input.videoDataUri, input.missingEmotion);
-            syntheticVideoClips.push(clip);
-            console.log(`Successfully generated clip ${i + 1}`);
-        } catch (error) {
-            console.error(`Failed to generate clip ${i + 1}:`, error);
-            // Re-throw the error to propagate it to the client
-            throw error;
+    const results = await Promise.allSettled(generationPromises);
+
+    const syntheticVideoClips = results
+      .filter(result => {
+        if (result.status === 'rejected') {
+          console.error("Clip generation failed:", result.reason);
         }
+        return result.status === 'fulfilled';
+      })
+      .map(result => (result as PromiseFulfilledResult<{ videoDataUri: string; }>).value);
+    
+    if (syntheticVideoClips.length === 0 && results.some(r => r.status === 'rejected')) {
+        const firstError = results.find(r => r.status === 'rejected') as PromiseRejectedResult;
+        throw firstError.reason;
     }
 
     return { syntheticVideoClips };

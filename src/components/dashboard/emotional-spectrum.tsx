@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import type { Dispatch, SetStateAction } from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { Label } from "../ui/label";
 
@@ -42,13 +42,37 @@ export function EmotionalSpectrum({
   setGeneratedClips,
 }: Props) {
   const [selectedEmotion, setSelectedEmotion] = useState("");
+  const [baseImageDataUri, setBaseImageDataUri] = useState<string | null>(null);
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (videoDataUri) {
+      const video = document.createElement("video");
+      video.crossOrigin = "anonymous";
+      video.src = videoDataUri;
+      video.onloadeddata = () => {
+        video.currentTime = 1; // Capture frame at 1 second
+      };
+      video.onseeked = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          setBaseImageDataUri(canvas.toDataURL("image/jpeg"));
+        }
+      }
+    } else {
+        setBaseImageDataUri(null);
+    }
+  }, [videoDataUri]);
+
   const handleGenerate = async () => {
-    if (!videoDataUri) {
+    if (!baseImageDataUri) {
       toast({
-        title: "No Video",
-        description: "Please upload a video first.",
+        title: "No Base Image",
+        description: "Please upload and process a video first.",
         variant: "destructive",
       });
       return;
@@ -66,7 +90,7 @@ export function EmotionalSpectrum({
     setGeneratedClips([]);
     try {
       const result = await generateMissingEmotions({
-        videoDataUri,
+        imageDataUri: baseImageDataUri,
         missingEmotion: selectedEmotion,
         targetNumberOfClips: 3,
       });
