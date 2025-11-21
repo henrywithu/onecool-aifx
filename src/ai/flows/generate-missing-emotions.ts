@@ -11,8 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import wav from 'wav';
-import { MediaPart } from 'genkit/media';
+import {MediaPart} from 'genkit/media';
 
 const GenerateMissingEmotionsInputSchema = z.object({
   videoDataUri: z
