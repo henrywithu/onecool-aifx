@@ -1,14 +1,6 @@
 
 'use server';
 
-/**
- * @fileOverview A flow that generates synthetic training data for missing emotions based on user's existing video data.
- *
- * - generateMissingEmotions - A function that generates synthetic training data for missing emotions.
- * - GenerateMissingEmotionsInput - The input type for the generateMissingEmotions function.
- * - GenerateMissingEmotionsOutput - The return type for the generateMissingEmotions function.
- */
-
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 

@@ -1,14 +1,4 @@
-// src/ai/flows/refine-likeness-parameters.ts
 'use server';
-/**
- * @fileOverview This file defines a Genkit flow for refining likeness parameters using natural language instructions.
- *
- * The flow takes natural language instructions and a base image, and returns a refined image based on those instructions.
- * It uses the googleai/gemini-2.5-flash-image-preview model for image editing.
- *
- * @param {RefineLikenessParametersInput} input - The input object containing the base image and refinement instructions.
- * @returns {Promise<RefineLikenessParametersOutput>} - A promise that resolves with the refined image data URI.
- */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';

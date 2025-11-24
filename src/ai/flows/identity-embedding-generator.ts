@@ -1,15 +1,5 @@
 'use server';
 
-/**
- * @fileOverview Identity Embedding Generator (Simplified)
- * 
- * WORKAROUND: Genkit's embed API doesn't support multimodal content.
- * This simplified version uses Gemini Vision to generate text descriptions
- * of faces, then embeds those descriptions as a proxy for face embeddings.
- * 
- * Future improvement: Use dedicated face recognition API or wait for Genkit multimodal embeddings.
- */
-
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 

@@ -1,13 +1,5 @@
 'use server';
 
-/**
- * @fileOverview Consistency Validator (Simplified)
- * 
- * WORKAROUND: Genkit's embed API doesn't support multimodal content.
- * This simplified version generates a text description of the generated content
- * and compares it against the identity description.
- */
-
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 

@@ -1,16 +1,5 @@
 'use server';
 
-/**
- * @fileOverview Data Quality Validator
- * 
- * Validates video quality for training data suitability.
- * Checks resolution, lighting, face visibility, motion blur, and diversity.
- * 
- * - validateDataQuality - Validates video quality
- * - ValidateDataQualityInput - Input schema
- * - ValidateDataQualityOutput - Output schema (DataQualityReport)
- */
-
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
