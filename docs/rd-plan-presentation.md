@@ -134,9 +134,6 @@ interface DataQualityReport {
 
 **1. Identity Embedding Generator** ([identity-embedding-generator.ts](file:///Users/henry/Downloads/project/onecool-aifx/src/ai/flows/identity-embedding-generator.ts))
 
-> [!NOTE]
-> **Current Workaround**: Genkit's embed API doesn't support multimodal content. We use Gemini Vision to generate detailed text descriptions of faces, then embed those descriptions as a proxy for face embeddings.
-
 ```typescript
 interface IdentityEmbedding {
   embedding: number[];            // 768-dimensional vector (text-embedding-004)
@@ -223,7 +220,7 @@ interface EmotionGenerationConfig {
   imageDataUri: string;           // Reference frame
   missingEmotion: string;         // Target emotion
   targetNumberOfClips: number;    // Clips to generate
-  identityEmbedding?: number[];   // For consistency validation
+  identityEmbedding: number[];   // For consistency validation
   intensity: 'subtle' | 'moderate' | 'intense';
   validateConsistency: boolean;   // Auto-reject low-quality clips
 }
@@ -344,44 +341,12 @@ interface HolisticValidation {
 
 ---
 
-## Implementation Roadmap
-
-### Phase 1: Foundation (Weeks 1-4)
-- [x] Implement Data Quality Validator
-- [x] Implement Identity Embedding Generator
-- [x] Implement Consistency Validator
-- [x] Set up Genkit flow infrastructure
-- [ ] Establish quality thresholds and benchmarks
-
-### Phase 2: Emotion Expansion (Weeks 5-8)
-- [x] Implement Initial Data Analysis flow
-- [x] Implement Missing Emotion Generator (Veo 3.0)
-- [ ] Generate synthetic emotion library (30+ emotions × 3 intensities)
-- [ ] Validate emotion consistency across all generated clips
-- [ ] Build emotion spectrum visualization dashboard
-
-### Phase 3: Holistic Integration (Weeks 9-12)
-- [x] Implement Likeness Parameter Refinement
-- [ ] Expand data capture protocol to include full-body
-- [ ] Develop motor trait extraction and validation
-- [ ] Integrate contextual data (costumes, environments)
-- [ ] Build multi-dimensional validation pipeline
-
-### Phase 4: Production Optimization (Weeks 13-16)
-- [ ] Performance optimization (reduce generation time)
-- [ ] Batch processing pipeline for large-scale data
-- [ ] Real-time preview system
-- [ ] User interface for parameter control
-- [ ] Comprehensive testing and quality assurance
-
----
-
 ## Technology Stack
 
 ### Core Infrastructure
 - **Framework**: Next.js 15.3.3 with TypeScript
 - **AI Orchestration**: Google Genkit 1.20.0
-- **Video Generation**: Veo 3.0 (8-second clips, 16:9 aspect ratio)
+- **Video Generation**: Veo 3.0 
 - **Vision Analysis**: Gemini 2.5 Flash (image preview)
 - **Embeddings**: text-embedding-004 (768 dimensions)
 
@@ -429,77 +394,4 @@ src/ai/flows/
 - ✅ Accurate reproduction of signature motor traits
 - ✅ Production-ready quality for commercial use
 
----
-
-## Risk Mitigation
-
-### Technical Risks
-
-> [!WARNING]
-> **Multimodal Embedding Limitation**: Genkit's embed API currently doesn't support multimodal content. We're using text descriptions as a proxy, which may reduce accuracy.
-
-**Mitigation**: Monitor Genkit updates for native multimodal embedding support. Consider integrating dedicated face recognition APIs (e.g., Azure Face API, AWS Rekognition) if accuracy is insufficient.
-
-> [!CAUTION]
-> **Veo 3.0 Rate Limits**: High-volume synthetic emotion generation may hit API rate limits.
-
-**Mitigation**: Implement exponential backoff retry logic (already implemented in `refine-likeness-parameters.ts`). Consider batch processing with queuing system.
-
-### Data Quality Risks
-
-> [!IMPORTANT]
-> **Insufficient Training Data**: Even with synthetic generation, some edge-case emotions may lack sufficient training examples.
-
-**Mitigation**: Prioritize high-value emotions based on use case requirements. Implement active learning to identify and fill gaps.
-
----
-
-## Budget & Resource Allocation
-
-### API Costs (Estimated Monthly)
-
-| Service | Usage | Cost per Unit | Monthly Cost |
-|:--------|:------|:--------------|:-------------|
-| **Veo 3.0** | 1,000 clips × 8s | $0.10/sec | $800 |
-| **Gemini 2.5 Flash** | 10,000 requests | $0.001/request | $10 |
-| **Text Embeddings** | 50,000 embeddings | $0.0001/embedding | $5 |
-| **Storage** | 500GB video data | $0.02/GB | $10 |
-| **Total** | | | **~$825/month** |
-
-### Team Requirements
-- **ML Engineer** (1 FTE): Model training and optimization
-- **Backend Engineer** (0.5 FTE): Pipeline infrastructure
-- **QA Engineer** (0.5 FTE): Validation and testing
-- **Data Annotator** (0.25 FTE): Quality control and labeling
-
----
-
-## Next Steps
-
-### Immediate Actions (Week 1)
-1. ✅ Review and approve R&D plan
-2. [ ] Establish quality benchmarks and success criteria
-3. [ ] Set up monitoring and logging infrastructure
-4. [ ] Begin Phase 2: Synthetic emotion library generation
-5. [ ] Create project dashboard for tracking metrics
-
-### Decision Points
-- [ ] **Week 4**: Evaluate consistency validation accuracy → Decide on face recognition API integration
-- [ ] **Week 8**: Assess emotion library quality → Determine if additional emotions needed
-- [ ] **Week 12**: Review holistic realism results → Finalize production readiness criteria
-
----
-
-## Conclusion
-
-This R&D plan provides a comprehensive roadmap to transform LikenessAI from a limited prototype into a production-ready, high-fidelity actor likeness generation system. By systematically addressing data ingestion, facial consistency, emotional range, and holistic realism, we will achieve:
-
-- **10x improvement** in training data quality and diversity
-- **95%+ facial consistency** across all generated content
-- **30+ emotions** with natural expression fidelity
-- **Full-body realism** with motor trait accuracy
-
-The modular architecture built on Genkit flows enables incremental development and validation, reducing risk while maintaining flexibility for future enhancements.
-
-**Recommended Decision**: Approve plan and proceed to Phase 2 (Emotion Expansion) while continuing to refine Phase 1 quality thresholds.
 

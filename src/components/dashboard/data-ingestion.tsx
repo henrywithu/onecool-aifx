@@ -63,7 +63,7 @@ export function DataIngestion({
       <div>
         <Label htmlFor="video-upload" className="text-sm">Upload Video</Label>
         <Input id="video-upload" type="file" accept="video/*" onChange={handleFileChange} className="mt-1" />
-        <p className="text-xs text-muted-foreground mt-1">Upload a short video (&lt;5s) for analysis.</p>
+        <p className="text-xs text-muted-foreground mt-1">Upload a short video for analysis.</p>
       </div>
 
       {isLoadingAnalysis && (
